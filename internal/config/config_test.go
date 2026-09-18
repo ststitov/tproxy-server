@@ -234,6 +234,16 @@ func TestLoadAcceptsSystemdCredentialReadPermissions(t *testing.T) {
 	if err := os.WriteFile(profiles, []byte(content), 0444); err != nil {
 		t.Fatal(err)
 	}
+	// os.WriteFile passes the mode through open(2), so the process umask can
+	// strip the group/other read bits this test depends on; chmod ignores it.
+	if err := os.Chmod(profiles, 0444); err != nil {
+		t.Fatal(err)
+	}
+	if info, err := os.Stat(profiles); err != nil {
+		t.Fatal(err)
+	} else if info.Mode().Perm() != 0444 {
+		t.Fatalf("profiles file mode is %#o, want 0444", info.Mode().Perm())
+	}
 	t.Setenv("CREDENTIALS_DIRECTORY", credentials)
 	server := `{"public_hostname":"proxy.example.com","public_dir":"public","profiles_file":"credentials/profiles.json"}`
 	path := filepath.Join(directory, "config.json")
